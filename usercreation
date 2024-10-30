@@ -1,0 +1,27 @@
+#!/bin/bash
+
+while getopts ":s:h:g:i" opt; do
+  case ${opt} in
+    s|shell) 
+      # Allows the user to specify which shell they want to use
+    ;;
+    h|home)
+      # Allows user to specify location of home directory
+    ;;  
+    g|group)
+      # Allows user to add new user to a group
+    ;;
+    i)
+      echo hello world
+      # tells the user what this script does
+    ;;
+    *)
+      cat << EOF
+      Invalid arguments, for more information, run this command with
+      -i or -info
+EOF
+      exit 1
+    ;;
+      # learned how to handle multiline strings from: https://stackoverflow.co        m/questions/10969953/how-to-output-a-multiline-string-in-bash
+    esac
+done
