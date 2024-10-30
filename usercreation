@@ -1,27 +1,71 @@
 #!/bin/bash
 
-while getopts ":s:h:g:i" opt; do
+s_arg="bash"
+h_arg=""
+g_arg=""
+
+while getopts ":s:h:g:m" opt; do
   case ${opt} in
     s|shell) 
       # Allows the user to specify which shell they want to use
+      s_arg=${OPTARG}
     ;;
     h|home)
       # Allows user to specify location of home directory
+      h_arg=${OPTARG}
     ;;  
     g|group)
       # Allows user to add new user to a group
+      # How to replace white space in strings: https://tldp.org/LDP/abs/html/string-manipulation.html
+      g_arg=${OPTARG}
+      g_arg=${g_arg// /,}
     ;;
-    i)
-      echo hello world
+    m|man)
+      cat <<- EOF
+	Usage: usercreation [options] <username>
+
+	Options:
+
+	-m, --man 
+
+	This option displays the manual for this script
+
+	-s, --shell <shell name>
+
+	This allows the user to specify a specific shell for the new user rather than the default shell for users, Bash
+
+	-h, --home <path/to/dir>
+
+	If the user provides an argument, a custom home directory will be created and set for the new user
+
+	-g, --group <list of groups>
+
+	additional groups can be specified and the new users will be assigned to those groups
+
+EOF	
+      exit 0	
       # tells the user what this script does
     ;;
     *)
       cat << EOF
       Invalid arguments, for more information, run this command with
-      -i or -info
+      -m or -man
 EOF
       exit 1
     ;;
-      # learned how to handle multiline strings from: https://stackoverflow.co        m/questions/10969953/how-to-output-a-multiline-string-in-bash
+      # learned how to handle multiline strings from: https://stackoverflow.com/questions/10969953/how-to-output-a-multiline-string-in-bash
     esac
 done
+
+#OPTINT used to allow manipulation of non-option arguments
+shift (($OPTINT - 1 ))
+
+# checks if there's a home option used and set to default home if not
+# https://dev.to/dak425/how-to-check-if-a-string-is-empty-in-bash-264l
+if [[! -n $h_arg ]]; then
+	useradd -m $h_arg -s $s_arg $1
+elif [[! -n $h_arg && ! -n $g_arg ]]; then
+	useradd -m $h_arg -s $s_arg -G $g_arg $1
+else
+	useradd -m -s $s_arg $1
+fi
