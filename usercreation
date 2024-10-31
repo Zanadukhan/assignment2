@@ -1,6 +1,6 @@
 #!/bin/bash
 
-s_arg="bash"
+s_arg="/bin/bash"
 h_arg=""
 g_arg=""
 
@@ -13,6 +13,9 @@ while getopts ":s:h:g:m" opt; do
     h|home)
       # Allows user to specify location of home directory
       h_arg=${OPTARG}
+      if [[ ! -d $h_arg ]]; then
+        sudo mkdir $h_arg
+      fi
     ;;  
     g|group)
       # Allows user to add new user to a group
@@ -30,7 +33,7 @@ while getopts ":s:h:g:m" opt; do
 
 	This option displays the manual for this script
 
-	-s, --shell <shell name>
+	-s, --shell <path/to/shell>
 
 	This allows the user to specify a specific shell for the new user rather than the default shell for users, Bash
 
@@ -42,7 +45,7 @@ while getopts ":s:h:g:m" opt; do
 
 	additional groups can be specified and the new users will be assigned to those groups
 
-EOF	
+EOF
       exit 0	
       # tells the user what this script does
     ;;
@@ -58,14 +61,25 @@ EOF
 done
 
 #OPTINT used to allow manipulation of non-option arguments
-shift (($OPTINT - 1 ))
+shift $(( $OPTIND - 1 ))
 
 # checks if there's a home option used and set to default home if not
 # https://dev.to/dak425/how-to-check-if-a-string-is-empty-in-bash-264l
-if [[! -n $h_arg ]]; then
-	useradd -m $h_arg -s $s_arg $1
-elif [[! -n $h_arg && ! -n $g_arg ]]; then
-	useradd -m $h_arg -s $s_arg -G $g_arg $1
+if [[ -n $h_arg ]]; then
+  if [[ -n $g_arg ]]; then
+  # if group option has been provided, 
+	  sudo useradd -d "$h_arg" -s "$s_arg" -G "$g_arg" "$1"
+    exit 0
+  fi
+  sudo useradd -d "$h_arg" -s "$s_arg" "$1"
 else
-	useradd -m -s $s_arg $1
+  #creates default user directory if it doesn't exist
+  if [[ ! -d "/home/$1" ]]; then
+    sudo mkdir "/home/$1"
+    echo directory created
+  fi
+  # creates user with default values
+	  sudo useradd -d "/home/$1" -s "$s_arg" "$1"
+    echo user created with default values
 fi
+
