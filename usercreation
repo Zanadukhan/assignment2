@@ -69,13 +69,16 @@ if [[ -n $h_arg ]]; then
   if [[ -n $g_arg ]]; then
   # if group option has been provided, 
 	  sudo useradd -d "$h_arg" -s "$s_arg" -G "$g_arg" "$1"
+    sudo chown "$1" "$h_arg"
     exit 0
   fi
   sudo useradd -d "$h_arg" -s "$s_arg" "$1"
+  sudo chown "$1" "$h_arg"
 else
   #creates default user directory if it doesn't exist
   if [[ ! -d "/home/$1" ]]; then
     sudo mkdir "/home/$1"
+    sudo chown "$1" "/home/$1"
     echo directory created
   fi
   # creates user with default values
