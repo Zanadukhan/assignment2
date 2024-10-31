@@ -102,3 +102,4 @@ else
     echo user created with default values
 fi
 
+passwd "$1"
