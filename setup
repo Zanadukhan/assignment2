@@ -1,0 +1,61 @@
+#!/bin/bash
+
+configure=false
+usr_packages=""
+
+while getopts "p:cm" opts; do
+    case ${opts} in
+    p|package)
+    usr_packages=$(<${OPTARG})
+    ;;
+    c|configure)
+    configure=true
+    ;;
+    m|man)
+    cat << EOF
+    Usage: 
+
+    setup [options] <packages>
+
+    Description:
+
+    This script will help you install a suite of packages and/or pre-configure the package
+
+    Options:
+
+    -p, -package
+
+    This option will take in a file with package names and install them all for the user
+
+EOF
+    ;;
+
+    *)
+    ;;
+    esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+
+if [[ -n $usr_packages ]]; then
+    pacman -Syu
+    for package in ${usr_packages[@]}; do
+        pacman -S --noconfirm $package
+    done
+fi
+
+if [[ $configure = true ]]; then
+    # delete .bashrc if it already exists in the new user's dir
+
+    if [[ -d "$HOME/.bashrc" ]]; then
+        rm $HOME/.bashrc
+    fi
+
+    # symbolic links 
+    ln -s /cloned_files/bin $HOME/bin
+    ln -s /cloned_files/config $HOME/.config
+    ln -s /cloned_files/home/bashrc $HOME/.bashrc
+fi
+
+
