@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# checks if user is root or script is run with sudo
+# learned from: https://serverfault.com/questions/37829/bash-scripting-require-script-to-be-run-as-root-or-with-sudo
+
+if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+    echo "Not running as root"
+    exit 1
+fi
+
+while getopts "p:cm" opts; do
+    case ${opts} in
+    p|package)
+    # If the user uses -p flag and passes in a directory with package names, the script will
+    # call pkge_installer to install packages
+
+    # checks if option passed in is a valid file in system
+    if [[ ! -f $OPTARG ]];then
+    echo "Not a valid file. Please check your spelling or whether you've linked to the correct file path"
+    exit 1
+    fi
+
+
+    # learned how to store contents of a file in a var from
+    # https://stackoverflow.com/questions/14116748/need-to-assign-the-contents-of-a-text-file-to-a-variable-in-a-bash-script
+    
+    export usr_packages=$(<${OPTARG})
+    # learned how to export variables so its availible in inner scripts from
+    # https://stackoverflow.com/questions/56277967/passing-variables-inside-a-variable-to-nested-script
+
+    # Learned how to run a file within another script from
+    # https://stackoverflow.com/questions/8352851/how-to-call-one-shell-script-from-another-shell-script
+    source ./pkge_installer
+
+    ;;
+    c|configure)
+    # if the user uses the -c flag, symbolic links will be made between the cloned files
+    # and the user directory
+
+    source ./linker
+
+    ;;
+    m|man)
+    # Manual on how to use the script if the user uses -m
+    cat << EOF
+    Usage: 
+
+    setup [options]
+
+    Description:
+
+    This script will help you install a suite of packages and/or pre-configure the package
+
+    Options:
+
+    -p, -package </path/to/file>
+
+    This option will take in a file with package names and install them all for the user
+
+    -c, -configure
+
+    This option will create symbolic links between the cloned files and create links from the pre configured files
+
+EOF
+    ;;
+
+    *)
+    # If the user passes in the wrong flag
+    cat <<-EOF
+    Wrong flag was passed in.
+    For more information, run this script with -m or -man
+EOF
+
+    ;;
+    esac
+done
+
+
+# if the script was executed with no arguments/flags
+# Learned from: https://unix.stackexchange.com/questions/50563/how-can-i-detect-that-no-options-were-passed-with-getopts
+if (( $OPTIND == 1 )); then
+   cat <<-EOF
+    No flags were passed in.
+    For more information, run this script with -m or -man
+EOF
+exit 1
+fi
+
+
+
+
+
+

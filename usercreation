@@ -1,13 +1,14 @@
 #!/bin/bash
 
+
+
+# default values to check whether a flag has been used
+
 groupadd=""
 userID=""
 addinfo=""
 homedir=""
 shell=""
-
-
-
 
 
 # checks if user is root or script is run with sudo
@@ -18,24 +19,56 @@ if [[ $(/usr/bin/id -u) -ne 0 ]]; then
     exit 1
 fi
 
-while getopts ":s:h:g:m:i:" opt; do
+while getopts ":s:h:g:mi:" opt; do
   case ${opt} in
     s|shell) 
-      # Allows the user to specify which shell they want to use
-      shell=/bin/${OPTARG}
+
+    # learned how to find list of available shells from:
+    # https://unix.stackexchange.com/questions/140286/how-to-find-list-of-available-shells-by-command-line
+
+    # tests if shell passed in is a valid shell by searching for it in /etc/shells with grep"
+
+    is_Shell=$(grep -w $OPTARG "/etc/shells")
+
+    if [[ -z $is_Shell ]]; then
+      echo "Invalid shell, use 'cat /etc/shells' to check available shells and try again"
+      exit 1
+    fi
+      
+    # Allows the user to specify which shell they want to use
+    shell=/bin/${OPTARG}
+    
     ;;
     h|home)
 
-      # Allows user to specify location of home directory
-      homedir=${OPTARG}
+    # Learned that "=~" does regex matching between two var from:
+    # https://unix.stackexchange.com/questions/340440/bash-test-what-does-do
+
+    # checks if option is a valid absolute file path, exits if not
+    if [[ ! $OPTARG =~ ^/ ]]; then
+      echo ${OPTARG} is not a valid absolute file path, try again
+      exit 1
+    fi
+
+    # Allows user to specify location of home directory
+    homedir=${OPTARG}
       
     ;;
     i|id)
+
+    # checks if the ID the user wants to use has already been assigned and exits if it has
+    usedID=$(grep -o $OPTARG /etc/passwd | head -n 1)
+    if [[ -n $usedID ]]; then
+      echo ${OPTARG} is an UID that has been assigned to another user, pick another one or let the script automatically assign free UID
+      exit 1
+    fi
+
     # if the user wants to use a specific ID
     userID=${OPTARG}
 
     ;;
     g|group)
+      # TODO fix at another date
       # Allows user to add new user to a group
       # converting a string into an array: https://stackoverflow.com/questions/9293887/how-to-read-a-space-delimited-string-into-an-array-in-bash
       read -a group_list <<< ${OPTARG}
@@ -60,13 +93,13 @@ while getopts ":s:h:g:m:i:" opt; do
 
 	This option displays the manual for this script
 
-	-s, --shell <path/to/shell>
+	-s, --shell <name of shell>
 
-  default: /bin/bash
+  default: bash
 
 	This allows the user to specify a specific shell for the new user rather tha  n the default shell for users, Bash
 
-	-h, --home <path/to/dir>
+	-h, --home <absolute/path/to/dir>
 
   default: /home/<username>
 
@@ -112,10 +145,7 @@ if [[ -z $userID ]]; then
             break
         fi
     done
-
 fi
-
-#looping to find the next empty groupID
 
 if [[ -z $homedir ]]; then
     homedir="/home/$1"
@@ -152,7 +182,7 @@ echo $defgroup_entry >> "/etc/group"
 
 chown "$1": "$homedir"
 
-# creating custom groups if argument was passed
+# creating custom groups if argument was passed by looping through the group names and greping the GID to see if its free
 if [[ -n $groupadd ]]; then
     for group in ${groupadd[@]}; do
         for num in {1000..100000}; do
@@ -166,19 +196,34 @@ if [[ -n $groupadd ]]; then
     done
 fi
 
+# TODO: add User to a group
+
 # Once new user has been created, prompt the script user to add a password
 echo "Give new user $1 a new password"
 echo
 
-# TODO: check if passwd succeeded, if not, cancel and do not try to create user
-passwd "$1"
 
+# passwd "$1"
+
+# if the user is unable to retype the new password, prompt the user to try again until the user is able to do it
+
+while true; do
+  passwd "$1"
+  if [[ ! $? -eq 0 ]]; then
+  echo Try again
+  passwd "$1"
+  else
+  break
+  fi
+done
+
+# Summary of results
 cat << EOF
 
 Your new user has been successfully created -
 
 Username: $1
-Password:
+Password: x
 Groups: $1 ${groupadd[@]}
 UID: $userID
 GID: $userID

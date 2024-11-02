@@ -1,6 +1,16 @@
 #!/bin/bash
 
+# Updates Arch to latest ver before looping through all the packages in the user's provided file
 pacman -Syu
 for package in ${usr_packages[@]}; do
     pacman -S --noconfirm $package
+    if [[ $? -eq 1 ]]; then
+    # if there's an issue with the package such as it not existing or misspelled, 
+    # the user will be clearly told that there's an issue and what to do, before exiting
+    echo
+    echo Something went wrong, check if your packages are valid/spelled 
+    echo correctly and run the script again
+    exit 1
+    fi
+
 done
