@@ -178,8 +178,9 @@ echo $user_entry >> "/etc/passwd"
 echo $defgroup_entry >> "/etc/group"
 
 # changing ownership for home dir to new user
-
-chown "$1": "$homedir"
+# learned how to apply ownership of all files through:
+# https://superuser.com/questions/260925/how-can-i-make-chown-work-recursively
+chown -R "$1": "$homedir"
 
 # This code loops through the groups provided and looks inside the /etc/group file to see if it already exists, if it does, it will append the user to the end so it becomes a member of the group
 if [[ -n $groupadd ]]; then
