@@ -68,7 +68,6 @@ while getopts ":s:h:g:mi:" opt; do
 
     ;;
     g|group)
-      # TODO fix at another date
       # Allows user to add new user to a group
       # converting a string into an array: https://stackoverflow.com/questions/9293887/how-to-read-a-space-delimited-string-into-an-array-in-bash
       read -a group_list <<< ${OPTARG}
@@ -109,7 +108,7 @@ while getopts ":s:h:g:mi:" opt; do
 
   default: <username>
 
-	additional groups can be specified and the new users will be assigned to tho  ise groups
+	the user can be added to additional group along with the initial default group
 
 EOF
       exit 0	
@@ -159,7 +158,7 @@ fi
 user_entry="$1:x:$userID:$userID:$addinfo:$homedir:$shell"
 
 #Entry for default group for /etc/group
-defgroup_entry="$1:x:$userID:$1"
+defgroup_entry="$1:x:$userID:"
 
 # creating home directory if it doesn't exist
 if [[ ! -d $homedir ]]; then
@@ -182,28 +181,31 @@ echo $defgroup_entry >> "/etc/group"
 
 chown "$1": "$homedir"
 
-# creating custom groups if argument was passed by looping through the group names and greping the GID to see if its free
+# This code loops through the groups provided and looks inside the /etc/group file to see if it already exists, if it does, it will append the user to the end so it becomes a member of the group
 if [[ -n $groupadd ]]; then
     for group in ${groupadd[@]}; do
-        for num in {1000..100000}; do
-        usedgroupIDarr=$(grep -o $num /etc/group | head -n 1)
-        if [[ -z $usedgroupIDarr ]]; then
-            group_entry="$group:x:$num:$1"
-            echo $group_entry >> /etc/group
-            break
+        found=$(grep $group /etc/group | head -n 1)
+        if [[ -n $found ]]; then
+        # group was found
+          add_group=${found}$1
+          # learned how to use sed from
+          # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
+          sed -i "s/$found/$add_group/" /etc/group
+          break
+        elif [[ -z $found ]]; then
+        # group does not exist
+            echo Group does not exist
         fi
         done
-    done
 fi
 
-# TODO: add User to a group
 
 # Once new user has been created, prompt the script user to add a password
 echo "Give new user $1 a new password"
 echo
 
 
-# passwd "$1"
+
 
 # if the user is unable to retype the new password, prompt the user to try again until the user is able to do it
 
@@ -211,7 +213,6 @@ while true; do
   passwd "$1"
   if [[ ! $? -eq 0 ]]; then
   echo Try again
-  passwd "$1"
   else
   break
   fi
