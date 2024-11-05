@@ -9,7 +9,7 @@ Usage:
 
   Description: 
   
-  This script allows users to create a new user with a custom home directory, custom shell, and additional groups to add the new user to.
+  This script allows users to create a new user with a custom home directory, custom shell, additional groups to add the new user to, and setting a password
 
     Options:
 
@@ -21,7 +21,7 @@ Usage:
 
     default: bash
 
-	This allows the user to specify a specific shell for the new user rather tha  n the default shell for users, Bash
+	This allows the user to specify a specific shell for the new user rather than the default shell for users
 
 	-h, --home <absolute/path/to/dir>
 
@@ -29,7 +29,7 @@ Usage:
 
 	If the user provides an argument, a custom home directory will be created an  d set for the new user
 
-	-g, --group <group1 group2 group3...>
+	-g, --group group1[ group2 group3 group4...]
 
     default: <username>
 
@@ -41,11 +41,11 @@ Usage:
 
 Usage: 
 
-setup [options]
+setup [options] username
 
 Description:
 
-This script will help you install a suite of packages and/or pre-configure the packages
+This script will help you install a suite of packages and/or pre-configure the packages for the new user who's name is passed in as an argument
 
     Options:
 
@@ -55,4 +55,4 @@ This script will help you install a suite of packages and/or pre-configure the p
 
     -c, -configure
 
-    This option will create symbolic links between the cloned files and create links from the pre configured files
+    This option will create symbolic links between the cloned files and their respective file/dir locations in the new user's home directory

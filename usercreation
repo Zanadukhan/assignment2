@@ -46,7 +46,7 @@ while getopts ":s:h:g:mi:" opt; do
 
     # checks if option is a valid absolute file path, exits if not
     if [[ ! $OPTARG =~ ^/ ]]; then
-      echo ${OPTARG} is not a valid absolute file path, try again
+      echo ${OPTARG} does not look like a valid absolute file path, try again
       exit 1
     fi
 
@@ -104,7 +104,7 @@ while getopts ":s:h:g:mi:" opt; do
 
 	If the user provides an argument, a custom home directory will be created an  d set for the new user
 
-	-g, --group <group1 group2 group3...>
+	-g, --group group1[ group2 group3 group4...]
 
   default: <username>
 
@@ -129,6 +129,12 @@ done
 
 #OPTINT used to allow manipulation of non-option arguments
 shift $(( $OPTIND - 1 ))
+
+# check if a argument (username) has been passed in
+if [[ -z $1 ]]; then
+  echo No username was passed, try running this again with a username as an argument or run this script with -m or --manual for more information
+  exit 1
+fi
 
 
 # setting default values
@@ -178,26 +184,30 @@ echo $user_entry >> "/etc/passwd"
 echo $defgroup_entry >> "/etc/group"
 
 # changing ownership for home dir to new user
-# learned how to apply ownership of all files through:
-# https://superuser.com/questions/260925/how-can-i-make-chown-work-recursively
-chown -R "$1": "$homedir"
+
+chown "$1": "$homedir"
 
 # This code loops through the groups provided and looks inside the /etc/group file to see if it already exists, if it does, it will append the user to the end so it becomes a member of the group
 if [[ -n $groupadd ]]; then
     for group in ${groupadd[@]}; do
-        found=$(grep $group /etc/group | head -n 1)
-        if [[ -n $found ]]; then
-        # group was found
-          add_group=${found}$1
-          # learned how to use sed from
-          # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
-          sed -i "s/$found/$add_group/" /etc/group
-          break
-        elif [[ -z $found ]]; then
-        # group does not exist
-            echo Group does not exist
-        fi
-        done
+      # finds lines that begin with the group name
+      found=$(grep ^$group: /etc/group)
+      if [[ -n $found ]]; then
+          if [[ $found =~ :$ ]]; then
+              add_group=${found}$1
+          else
+          # group was found
+              add_group="$found,$1"
+          fi
+    # learned how to use sed from
+    # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
+        sed -i "s/$found/$add_group/" /etc/group
+      elif [[ -z $found ]]; then
+    # group does not exist
+          echo Group does not exist
+          group=''
+      fi
+    done
 fi
 
 

@@ -2,13 +2,15 @@
 
 # delete .bashrc if it already exists in the new user's dir
 
-if [[ -d "$HOME/.bashrc" ]]; then
-    rm $HOME/.bashrc
+if [[ -d "home/$username/.bashrc" ]]; then
+    rm /home/$username/.bashrc
 fi
 
 # learned about how to use symbolic links from
 # https://www.freecodecamp.org/news/linux-ln-how-to-create-a-symbolic-link-in-linux-example-bash-command/
 # symbolic links 
-ln -s /cloned_files/bin $HOME/bin
-ln -s /cloned_files/config $HOME/.config
-ln -s /cloned_files/home/bashrc $HOME/.bashrc
+ln -s /home/$username/cloned_files/bin /home/$username/bin
+ln -s /home/$username/cloned_files/config /home/$username/.config
+ln -s /home/$username/cloned_files/home/bashrc /home/$username/.bashrc
+
+echo /home/$username/.bashrc
