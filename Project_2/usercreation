@@ -1,0 +1,306 @@
+#!/bin/bash
+
+# checks if user is root or script is run with sudo
+# learned from: https://serverfault.com/questions/37829/bash-scripting-require-script-to-be-run-as-root-or-with-sudo
+
+
+if [[ $(/usr/bin/id -u) -ne 0 ]]; then
+    echo "Not running as root"
+    exit 2
+fi
+
+# Function for setting defaults, needs to be done this way for OPINT shift for new username
+set_default () {
+if [[ -z $1 ]]; then  
+  # If no username is provided ($1 is empty), the function prints an error message and exits the script with a status code of 2.
+  echo No username was passed, try running this again with a username as an argument or run this script with -m or --manual for more information
+  exit 2
+fi
+
+  # If the `homedir` variable is not set, it defaults to `/home/<username>`.
+if [[ -z $homedir ]]; then
+    homedir="/home/$1"
+fi
+
+  # If the `shell` variable is not set, it defaults to `/bin/bash`.
+if [[ -z $shell ]]; then
+    shell="/bin/bash"
+fi
+}
+
+
+# function loops through a range of numbers to find the next available user ID (UID) if a custom UID is not provided.
+# It checks each number in the range to see if it is already in use in the `/etc/passwd` file. If a number is not found in the file, it is assigned as the new `userID`.
+# It also checks if the username has already been used, and if so, ends the script.
+available_user () {
+
+# Checks if username is available
+local user_ok=$(grep ^$1: /etc/passwd)
+
+# if already been used, end the script
+if [[ -n $user_ok ]]; then
+  echo this username has already been used
+  exit 2
+fi
+
+
+if [[ -z $userID ]]; then
+  # check if numbers from 1000-100000 is already used in /etc/passwd
+    for num in {1000..100000}; do
+        local usedIDarr=$(grep -o $num /etc/passwd)
+        # checking if the current num is in the passwd file, if grep returns nothing, it should be used as a new UID
+        if [[ -z $usedIDarr ]]; then
+            userID=$num
+            break
+            # available num has been found so break the loop
+        fi
+    done
+fi
+}
+
+
+
+# The function creates a home directory for a user if it does not already exist. 
+# It also copies the contents of `/etc/skel` to the new home directory and changes the ownership to the new user.
+make_homedir () {
+  if [[ ! -d $homedir ]]; then
+    mkdir $homedir
+    # copy contents of /etc/skel to new home dir
+      # learned how to copy all contents of a folder to another one from:
+      # https://askubuntu.com/questions/86822/how-can-i-copy-the-contents-of-a-folder-to-another-folder-in-a-different-directo
+    cp -a /etc/skel/. $homedir 
+
+    # changing ownership for home dir to new user
+    chown -R "$1": "$homedir"
+fi
+}
+
+# The function writes user and group information into the `/etc/passwd` and `/etc/group` files.
+# It constructs entries for the user and group based on provided variables and appends them to the respective files.
+write_user_group () {
+  #Entry for /etc/passwd from variables
+  local user_entry="$1:x:$userID:$userID:$addinfo:$homedir:$shell"
+
+  # adding user to /etc/passwd
+  echo $user_entry >> "/etc/passwd"
+
+  #Entry for default group for /etc/group
+  local defgroup_entry="$1:x:$userID:"
+
+  # adding default group to /etc/group
+  echo $defgroup_entry >> "/etc/group"
+  
+}
+
+
+# this function adds the user to the specified groups.
+add_user_to_group () {
+  if [[ -n $groupadd ]]; then
+    for group in ${groupadd[@]}; do
+      # finds lines that begin with the group name
+      local found=$(grep ^$group: /etc/group)
+      if [[ -n $found ]]; then
+          if [[ $found =~ :$ ]]; then
+          # If it ends with a comma, the user can be inserted right in
+              local add_group=${found}$1
+          else
+          # group was found, so they need to be separated with commas
+              local add_group="$found,$1"
+          fi
+    # learned how to use sed from
+    # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
+        sed -i "s/$found/$add_group/" /etc/group
+      elif [[ -z $found ]]; then
+    # group does not exist, remove it from array
+          echo Group does not exist
+          # learned how to remove element from array in bash from:
+          # https://stackoverflow.com/questions/16860877/remove-an-element-from-a-bash-array
+          groupadd=${groupadd[@]/$group}
+      fi
+    done
+fi
+}
+
+# this function uses the `passwd` command to create a password for a new user. 
+# It will loop indefinitely (or until a SIGINT is sent by the user) until the password is set properly.
+create_passwd () {
+  # Once new user has been created, prompt the script user to add a password
+  echo "Give new user $1 a new password"
+  echo
+  while true; do
+  passwd "$1"
+  # if the user is unable to retype the new password, prompt the user to try again until the user is able to do it
+  if [[ ! $? -eq 0 ]]; then
+  echo Try again
+  else
+  break
+  fi
+done
+}
+
+# print out summary of results
+
+print_details () {
+cat << EOF
+
+Your new user has been successfully created -
+
+Username: $1
+Password: x
+Groups: $1 ${groupadd[@]}
+UID: $userID
+GID: $userID
+Shell: $shell
+Home Directory: $homedir
+EOF
+}
+
+
+main () {
+set_default $1
+
+available_user $1
+
+write_user_group $1
+
+make_homedir $1
+
+add_user_to_group $1
+
+create_passwd $1
+
+print_details $1
+}
+
+# empty var to check whether a flag has been used
+
+groupadd=""
+userID="" 
+addinfo=""
+homedir=""
+shell=""
+
+
+while getopts ":s:h:g:mi:" opt; do
+  case ${opt} in
+    s|shell) 
+
+    # learned how to find list of available shells from:
+    # https://unix.stackexchange.com/questions/140286/how-to-find-list-of-available-shells-by-command-line
+
+    # tests if shell passed in is a valid shell by searching for it in /etc/shells with grep"
+
+    is_Shell=$(grep -w $OPTARG "/etc/shells")
+
+    if [[ -z $is_Shell ]]; then
+      echo "Invalid shell, use 'cat /etc/shells' to check available shells and try again"
+      exit 2
+    fi
+      
+    # Allows the user to specify which shell they want to use
+    shell=/bin/${OPTARG}
+    
+    ;;
+    h|home)
+
+    # Learned that "=~" does regex matching between two var from:
+    # https://unix.stackexchange.com/questions/340440/bash-test-what-does-do
+
+    # checks if option is a valid absolute file path by seeing if it starts with a /, exits if not
+    if [[ ! $OPTARG =~ ^/ ]]; then
+      echo ${OPTARG} does not look like a valid absolute file path, try again
+      exit 2
+    fi
+
+    # Allows user to specify location of home directory
+    homedir=${OPTARG}
+      
+    ;;
+    i|id)
+
+    # checks if the ID the user wants to use has already been assigned and exits if it has
+    usedID=$(grep -o $OPTARG /etc/passwd)
+    if [[ -n $usedID ]]; then
+      echo ${OPTARG} is an UID that has been assigned to another user, pick another one or let the script automatically assign free UID
+      exit 2
+    fi
+
+    # if the user wants to use a specific ID
+    userID=${OPTARG}
+
+    ;;
+    g|group)
+
+      # Allows user to add new user to a group
+      # converting a string into an array: https://stackoverflow.com/questions/9293887/how-to-read-a-space-delimited-string-into-an-array-in-bash
+      read -a group_list <<< ${OPTARG}
+      groupadd=${group_list[@]}
+    ;;
+
+    # script manual for the user
+    # learned how to handle multiline strings from: https://stackoverflow.com/questions/10969953/how-to-output-a-multiline-string-in-bash
+
+    m|man)
+      cat <<- EOF
+	Usage: 
+  
+  usercreation [options] <username>
+
+  Description: 
+  
+  This script allows users to create a new user along with a home directory
+  and whatever groups they would like to add the user to.
+
+	Options:
+
+	-m, --man 
+
+	This option displays the manual for this script
+
+	-s, --shell <name of shell>
+
+  default: bash
+
+	This allows the user to specify a specific shell for the new user rather than the default shell for users, Bash
+
+	-h, --home <absolute/path/to/dir>
+
+  default: /home/<username>
+
+	If the user provides an argument, a custom home directory will be created and set for the new user
+
+	-g, --group "group1[ group2 group3 group4...]"
+
+  default: <username>
+
+  the user can be added to additional group along with the initial default group
+
+  -i, --id <number>
+
+  if a specific userID wants to be used for a user, a number can be passed in as an option
+
+	
+
+EOF
+      exit 0	
+      
+    ;;
+    *)
+      cat << EOF
+      Invalid arguments, for more information, run this command with
+      -m or -man
+EOF
+      exit 2
+    ;;
+    esac
+done
+
+
+
+#OPTINT used to allow manipulation of non-option arguments
+shift $(( $OPTIND - 1 ))
+
+
+main $1
+
+

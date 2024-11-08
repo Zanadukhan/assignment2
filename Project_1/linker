@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# delete .bashrc if it already exists in the new user's dir
+
+if [[ -d "home/$username/.bashrc" ]]; then
+    rm /home/$username/.bashrc
+fi
+
+# learned about how to use symbolic links from
+# https://www.freecodecamp.org/news/linux-ln-how-to-create-a-symbolic-link-in-linux-example-bash-command/
+# Creates symbolic links between cloned files and their respective locations on the new user's home dir 
+ln -s /home/$username/2420-as2-starting-files/bin /home/$username/bin
+ln -s /home/$username/2420-as2-starting-files/config /home/$username/.config
+ln -s /home/$username/2420-as2-starting-files/home/bashrc /home/$username/.bashrc
+
+# Change the ownership of the newly created linked files from root to the new user
+
+chown -R "$username": /home/$username

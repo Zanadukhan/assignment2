@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Updates Arch to latest ver before looping through all the packages in the user's provided file
+# Updates Arch to latest ver before looping through all the packages in the user's provided file and installs them
 pacman -Syu
 for package in ${usr_packages[@]}; do
     pacman -S --noconfirm $package

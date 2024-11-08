@@ -17,7 +17,7 @@ while getopts "p:cm" opts; do
     # checks if option passed in is a valid file in system
     if [[ ! -f $OPTARG ]];then
     echo "Not a valid file. Please check your spelling or whether you've linked to the correct file path"
-    exit 1
+    exit 2
     fi
 
 
@@ -37,6 +37,7 @@ while getopts "p:cm" opts; do
     # if the user uses the -c flag, symbolic links will be made between the cloned files
     # and the user directory
 
+    # shift used so that the non-option argument can be used
     shift $(( $OPTIND - 1 ))
     # using SUDO sets the $HOME var to /root rather than the user's home dir, so username needs to passed in to correctly locate home dir
     export username=$1
@@ -86,7 +87,7 @@ if (( $OPTIND == 1 )); then
     No flags were passed in.
     For more information, run this script with -m or -man
 EOF
-exit 1
+exit 2
 fi
 
 

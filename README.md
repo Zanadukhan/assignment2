@@ -1,13 +1,47 @@
 # New User Setup Scripts
+
+
+This repository contains two bash scripts that will help you create and configure a new user on a linux system.
+
+note: this must be done by the root user or through sudo
+
+
+
+## 2. User Configuration Script (Project_1)
+
+### Usage: 
+
+setup [options] username
+
+### Description:
+
+This script will help you install a suite of packages and/or pre-configure the packages for the new user who's name is passed in as an argument
+
+    Options:
+
+    -p, -package </path/to/file>
+
+    This option will take in a file with package names and install them all for the user
+
+    -c, -configure
+
+    This option will create symbolic links between the cloned files and their respective file/dir locations in the new user's home directory
+
+### Example:
+
+sudo setup -p packages -c new_user
+
+This would install packages provided in the "packages" file and create symbolic links between the 2420 starting files and the home directory equivalents in the new_user's home directory
+
 ---
 
-## Creating a new user
+## 2. Creating a new user (Project_2)
 
-Usage: 
+### Usage: 
   
   usercreation [options] username
 
-  Description: 
+### Description: 
   
   This script allows users to create a new user with a custom home directory, custom shell, additional groups to add the new user to, and setting a password
 
@@ -35,24 +69,12 @@ Usage:
 
 	the user can be added to additional group along with the initial default group
 
----
+    -i, --id <number>
 
-# User Configuration Script
+    if a specific userID wants to be used for a user, a number can be passed in as an option
 
-Usage: 
+### Example:
 
-setup [options] username
+sudo usercreation -i 1001 -h /home/new -s bash -g "wheel nathan" tim
 
-Description:
-
-This script will help you install a suite of packages and/or pre-configure the packages for the new user who's name is passed in as an argument
-
-    Options:
-
-    -p, -package </path/to/file>
-
-    This option will take in a file with package names and install them all for the user
-
-    -c, -configure
-
-    This option will create symbolic links between the cloned files and their respective file/dir locations in the new user's home directory
+This would create a new user called tim with the UID and GID of 1001, a home directory at /home/new, belonging to the groups wheel and nathan.
